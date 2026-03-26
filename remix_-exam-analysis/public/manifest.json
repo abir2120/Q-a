@@ -1,0 +1,21 @@
+{
+  "name": "Analyze.AI",
+  "short_name": "Analyze.AI",
+  "description": "AI-powered university question bank analyzer.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/analyze-ai/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/analyze-ai/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

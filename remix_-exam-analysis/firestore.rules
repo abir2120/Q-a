@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: subjects
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - userId: string (required, immutable)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: analyses
+    // Fields:
+    //   - subjectId: string (required, immutable)
+    //   - userId: string (required, immutable)
+    //   - result: map (required, contains questions, chapters, totalQuestions, summary, modelQuestion)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "abirgaming622@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidString(field, min, max) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= min &&
+             request.resource.data[field].size() <= max;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /subjects/{subjectId} {
+      function isValidSubject(data) {
+        return hasRequiredFields(['name', 'userId', 'createdAt']) &&
+               hasOnlyAllowedFields(['name', 'userId', 'createdAt']) &&
+               data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+               data.userId is string &&
+               data.createdAt is timestamp;
+      }
+
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidSubject(request.resource.data) && (isOwner(request.resource.data.userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidSubject(request.resource.data) &&
+                      (isOwner(resource.data.userId) || isAdmin()) &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    match /analyses/{analysisId} {
+      function isValidAnalysis(data) {
+        return hasRequiredFields(['subjectId', 'userId', 'result', 'createdAt']) &&
+               hasOnlyAllowedFields(['subjectId', 'userId', 'result', 'createdAt']) &&
+               data.subjectId is string &&
+               data.userId is string &&
+               data.result is map &&
+               data.createdAt is timestamp;
+      }
+
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidAnalysis(request.resource.data) && (isOwner(request.resource.data.userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidAnalysis(request.resource.data) &&
+                      (isOwner(resource.data.userId) || isAdmin()) &&
+                      request.resource.data.userId == resource.data.userId &&
+                      request.resource.data.subjectId == resource.data.subjectId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    match /users/{userId} {
+      function isValidUser(data) {
+        return hasRequiredFields(['userId', 'email', 'role', 'credits', 'isPremium']) &&
+               data.userId is string &&
+               data.email is string &&
+               data.role in ['user', 'admin'] &&
+               data.credits is number &&
+               data.isPremium is bool &&
+               (!('createdAt' in data) || data.createdAt is timestamp);
+      }
+
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                      hasRequiredFields(['createdAt']) && request.resource.data.createdAt is timestamp &&
+                      (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && 
+                      isValidUser(request.resource.data) && 
+                      (isAdmin() || (
+                        request.resource.data.userId == resource.data.get('userId', request.resource.data.userId) &&
+                        request.resource.data.email == resource.data.get('email', request.resource.data.email) &&
+                        request.resource.data.role == resource.data.get('role', request.resource.data.role) &&
+                        request.resource.data.isPremium == resource.data.get('isPremium', request.resource.data.isPremium) &&
+                        request.resource.data.createdAt == resource.data.get('createdAt', request.resource.data.createdAt) &&
+                        (
+                          request.resource.data.credits == resource.data.get('credits', 0) - 10 || 
+                          request.resource.data.credits == resource.data.get('credits', request.resource.data.credits)
+                        )
+                      ));
+      allow delete: if isAdmin();
+    }
+
+    match /paymentRequests/{requestId} {
+      function isValidPaymentRequest(data) {
+        return hasRequiredFields(['userId', 'userEmail', 'amount', 'method', 'transactionId', 'planId', 'status', 'createdAt']) &&
+               data.userId is string &&
+               data.userEmail is string &&
+               data.amount is number &&
+               data.method in ['bKash', 'Nagad'] &&
+               data.transactionId is string &&
+               data.planId is string &&
+               data.status in ['pending', 'approved', 'rejected'] &&
+               data.createdAt is timestamp;
+      }
+
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidPaymentRequest(request.resource.data) && isOwner(request.resource.data.userId) && request.resource.data.status == 'pending';
+      allow update: if isAdmin() && isValidPaymentRequest(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

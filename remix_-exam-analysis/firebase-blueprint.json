@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "Subject": {
+      "title": "Subject",
+      "description": "An academic subject like Math, Physics, etc.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the subject" },
+        "userId": { "type": "string", "description": "UID of the owner" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "userId", "createdAt"]
+    },
+    "Analysis": {
+      "title": "Analysis",
+      "description": "Saved analysis results for a subject",
+      "type": "object",
+      "properties": {
+        "subjectId": { "type": "string", "description": "ID of the parent subject" },
+        "userId": { "type": "string", "description": "UID of the owner" },
+        "result": { "$ref": "AnalysisResult" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subjectId", "userId", "result", "createdAt"]
+    },
+    "AnalysisResult": {
+      "title": "AnalysisResult",
+      "description": "Detailed analysis data including questions and chapter stats.",
+      "type": "object",
+      "properties": {
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "chapter": { "type": "string" },
+              "frequency": { "type": "number" },
+              "years": { "type": "array", "items": { "type": "string" } },
+              "hasDiagram": { "type": "boolean" },
+              "diagramDescription": { "type": "string" },
+              "diagramUrl": { "type": "string" }
+            }
+          }
+        },
+        "chapters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "count": { "type": "number" },
+              "percentage": { "type": "number" }
+            }
+          }
+        },
+        "totalQuestions": { "type": "number" },
+        "summary": { "type": "string" },
+        "modelQuestion": { "type": "string" },
+        "sourceImage": { "type": "string" }
+      }
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with credits and subscription status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user" },
+        "email": { "type": "string", "format": "email", "description": "Email of the user" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "Role of the user" },
+        "credits": { "type": "number", "description": "Remaining analysis credits" },
+        "isPremium": { "type": "boolean", "description": "Whether the user is a premium member" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "role", "credits", "isPremium", "createdAt"]
+    },
+    "PaymentRequest": {
+      "title": "PaymentRequest",
+      "description": "A user's request for credits or subscription after manual payment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user" },
+        "userEmail": { "type": "string", "description": "Email of the user" },
+        "amount": { "type": "number", "description": "Amount paid in TK" },
+        "method": { "type": "string", "description": "Payment method (bKash/Nagad)" },
+        "transactionId": { "type": "string", "description": "Transaction ID from the provider" },
+        "planId": { "type": "string", "description": "ID of the plan being purchased" },
+        "status": { "type": "string", "description": "Status of the request (pending/approved/rejected)" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "amount", "method", "transactionId", "planId", "status", "createdAt"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global application settings like payment numbers and packages.",
+      "type": "object",
+      "properties": {
+        "bkashNumber": { "type": "string" },
+        "nagadNumber": { "type": "string" },
+        "packages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "credits": { "type": "number" },
+              "price": { "type": "number" },
+              "description": { "type": "string" },
+              "isPremium": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/subjects/{subjectId}": {
+      "schema": "Subject",
+      "description": "Collection of subjects"
+    },
+    "/analyses/{analysisId}": {
+      "schema": "Analysis",
+      "description": "Collection of saved analysis results"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/paymentRequests/{requestId}": {
+      "schema": "PaymentRequest",
+      "description": "Collection of manual payment requests"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "Global application settings"
+    }
+  }
+}
